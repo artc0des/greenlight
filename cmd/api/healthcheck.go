@@ -1,13 +1,20 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 )
 
 func (app *application) healthCheckHandler(w http.ResponseWriter, r *http.Request) {
-	js := `{"status": "available", "environment": %q, "version": %q}`
-	js = fmt.Sprintf(js, app.config.env, version)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(js))
+	env := envelope{
+		"status":      "available",
+		"environment": app.config.env,
+		"version":     version,
+	}
+
+	err := app.writeJson(w, http.StatusOK, env, nil)
+	if err != nil {
+		app.logger.Error(err.Error())
+		http.Error(w, "the server encountered an error and could not process your request", http.StatusInternalServerError)
+		return
+	}
 }
