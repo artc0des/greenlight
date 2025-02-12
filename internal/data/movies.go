@@ -1,8 +1,10 @@
 package data
 
 import (
+	"database/sql"
 	"time"
 
+	"github.com/lib/pq"
 	"greenlight.artc0des.com/internal/validator"
 )
 
@@ -14,6 +16,33 @@ type Movie struct {
 	Runtime   Runtime   `json:"runtime,omitempty"`
 	Genres    []string  `json:"genres,omitempty"`
 	Version   int32     `json:"version,omitempty"`
+}
+
+type MovieModel struct {
+	db *sql.DB
+}
+
+func (mb *MovieModel) Insert(movie *Movie) error {
+	query := `
+        INSERT INTO movies (title, year, runtime, genres) 
+        VALUES ($1, $2, $3, $4)
+        RETURNING id, created_at, version`
+
+	args := []any{movie.Title, movie.Year, movie.Runtime, pq.Array(movie.Genres)}
+
+	return mb.db.QueryRow(query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
+}
+
+func (mb *MovieModel) Get(movieId int64) (*Movie, error) {
+	return nil, nil
+}
+
+func (mb *MovieModel) Update(movie *Movie) error {
+	return nil
+}
+
+func (mb *MovieModel) Delete(movieId int64) error {
+	return nil
 }
 
 func ValidateMovie(v *validator.Validator, movie *Movie) {
