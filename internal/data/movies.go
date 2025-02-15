@@ -2,6 +2,7 @@ package data
 
 import (
 	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/lib/pq"
@@ -34,11 +35,46 @@ func (mb *MovieModel) Insert(movie *Movie) error {
 }
 
 func (mb *MovieModel) Get(movieId int64) (*Movie, error) {
-	return nil, nil
+	if movieId < 1 {
+		return nil, ErrRecordNotFound
+	}
+	query := `SELECT id, created_at, title, year, runtime, genres, version
+			FROM movies
+			WHERE id = $1`
+
+	var movie Movie
+
+	err := mb.db.QueryRow(query, movieId).Scan(
+		&movie.ID,
+		&movie.CreatedAt,
+		&movie.Title,
+		&movie.Year,
+		&movie.Runtime,
+		pq.Array(&movie.Genres),
+		&movie.Version,
+	)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
+
+	return &movie, nil
 }
 
 func (mb *MovieModel) Update(movie *Movie) error {
-	return nil
+	query := `UPDATE movies 
+				SET title = $1, year = $2, runtime = $3, genres = $4, version = version + 1
+				WHERE id = $5
+				RETURNING version`
+
+	args := []any{movie.Title, movie.Year, movie.Runtime, pq.Array(movie.Genres), movie.ID}
+
+	return mb.db.QueryRow(query, args...).Scan(&movie.Version)
 }
 
 func (mb *MovieModel) Delete(movieId int64) error {
