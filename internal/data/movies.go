@@ -1,6 +1,7 @@
 package data
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"time"
@@ -31,7 +32,11 @@ func (mb *MovieModel) Insert(movie *Movie) error {
 
 	args := []any{movie.Title, movie.Year, movie.Runtime, pq.Array(movie.Genres)}
 
-	return mb.db.QueryRow(query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+
+	defer cancel()
+
+	return mb.db.QueryRowContext(ctx, query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
 }
 
 func (mb *MovieModel) Get(movieId int64) (*Movie, error) {
@@ -44,7 +49,11 @@ func (mb *MovieModel) Get(movieId int64) (*Movie, error) {
 
 	var movie Movie
 
-	err := mb.db.QueryRow(query, movieId).Scan(
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+
+	defer cancel()
+
+	err := mb.db.QueryRowContext(ctx, query, movieId).Scan(
 		&movie.ID,
 		&movie.CreatedAt,
 		&movie.Title,
@@ -69,12 +78,24 @@ func (mb *MovieModel) Get(movieId int64) (*Movie, error) {
 func (mb *MovieModel) Update(movie *Movie) error {
 	query := `UPDATE movies 
 				SET title = $1, year = $2, runtime = $3, genres = $4, version = version + 1
-				WHERE id = $5
+				WHERE id = $5 and version = $6
 				RETURNING version`
 
-	args := []any{movie.Title, movie.Year, movie.Runtime, pq.Array(movie.Genres), movie.ID}
+	args := []any{movie.Title, movie.Year, movie.Runtime, pq.Array(movie.Genres), movie.ID, movie.Version}
 
-	return mb.db.QueryRow(query, args...).Scan(&movie.Version)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := mb.db.QueryRowContext(ctx, query, args...).Scan(&movie.Version)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrEditConflict
+		default:
+			return err
+		}
+	}
+	return nil
 }
 
 func (mb *MovieModel) Delete(movieId int64) error {
@@ -85,7 +106,10 @@ func (mb *MovieModel) Delete(movieId int64) error {
 	query := `DELETE FROM movies WHERE id = $1`
 	args := []any{movieId}
 
-	result, err := mb.db.Exec(query, args...)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	result, err := mb.db.ExecContext(ctx, query, args...)
 
 	if err != nil {
 		return err
