@@ -126,6 +126,35 @@ func (mb *MovieModel) Delete(movieId int64) error {
 	return nil
 }
 
+func (mb *MovieModel) GetAll() ([]Movie, error) {
+	query := `SELECT * FROM movies`
+
+	rows, err := mb.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+
+	movies := []Movie{}
+
+	for rows.Next() {
+		movie := Movie{}
+		err = rows.Scan(&movie.ID,
+			&movie.CreatedAt,
+			&movie.Title,
+			&movie.Year,
+			&movie.Runtime,
+			pq.Array(&movie.Genres),
+			&movie.Version)
+		if err != nil {
+			return nil, err
+		}
+
+		movies = append(movies, movie)
+	}
+
+	return movies, nil
+}
+
 func ValidateMovie(v *validator.Validator, movie *Movie) {
 	v.Check(movie.Title != "", "title", "must be provided")
 	v.Check(len(movie.Title) <= 500, "title", "must not be more than 500 bytes long")
