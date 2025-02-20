@@ -126,19 +126,29 @@ func (mb *MovieModel) Delete(movieId int64) error {
 	return nil
 }
 
-func (mb *MovieModel) GetAll() ([]Movie, error) {
-	query := `SELECT * FROM movies`
+func (mb *MovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, error) {
+	query := `SELECT id, created_at, title, year, runtime, genres, version
+	 		 FROM movies
+			 WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '')
+			 AND (genres @> $2 OR $2 = '{}')
+			 ORDER BY id`
 
-	rows, err := mb.db.Query(query)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	rows, err := mb.db.QueryContext(ctx, query, title, pq.Array(genres))
 	if err != nil {
 		return nil, err
 	}
 
-	movies := []Movie{}
+	defer rows.Close()
+
+	movies := []*Movie{}
 
 	for rows.Next() {
 		movie := Movie{}
-		err = rows.Scan(&movie.ID,
+		err := rows.Scan(
+			&movie.ID,
 			&movie.CreatedAt,
 			&movie.Title,
 			&movie.Year,
@@ -149,7 +159,11 @@ func (mb *MovieModel) GetAll() ([]Movie, error) {
 			return nil, err
 		}
 
-		movies = append(movies, movie)
+		movies = append(movies, &movie)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return movies, nil
