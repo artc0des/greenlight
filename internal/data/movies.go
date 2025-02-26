@@ -22,7 +22,7 @@ type Movie struct {
 }
 
 type MovieModel struct {
-	db *sql.DB
+	DB *sql.DB
 }
 
 func (mb *MovieModel) Insert(movie *Movie) error {
@@ -37,7 +37,7 @@ func (mb *MovieModel) Insert(movie *Movie) error {
 
 	defer cancel()
 
-	return mb.db.QueryRowContext(ctx, query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
+	return mb.DB.QueryRowContext(ctx, query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
 }
 
 func (mb *MovieModel) Get(movieId int64) (*Movie, error) {
@@ -54,7 +54,7 @@ func (mb *MovieModel) Get(movieId int64) (*Movie, error) {
 
 	defer cancel()
 
-	err := mb.db.QueryRowContext(ctx, query, movieId).Scan(
+	err := mb.DB.QueryRowContext(ctx, query, movieId).Scan(
 		&movie.ID,
 		&movie.CreatedAt,
 		&movie.Title,
@@ -87,7 +87,7 @@ func (mb *MovieModel) Update(movie *Movie) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	err := mb.db.QueryRowContext(ctx, query, args...).Scan(&movie.Version)
+	err := mb.DB.QueryRowContext(ctx, query, args...).Scan(&movie.Version)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -110,7 +110,7 @@ func (mb *MovieModel) Delete(movieId int64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	result, err := mb.db.ExecContext(ctx, query, args...)
+	result, err := mb.DB.ExecContext(ctx, query, args...)
 
 	if err != nil {
 		return err
@@ -138,7 +138,7 @@ func (mb *MovieModel) GetAll(title string, genres []string, filters Filters) ([]
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	args := []any{title, pq.Array(genres), filters.limit(), filters.offSet()}
-	rows, err := mb.db.QueryContext(ctx, query, args...)
+	rows, err := mb.DB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, Metadata{}, err
 	}
