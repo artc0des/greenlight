@@ -52,7 +52,7 @@ func (m *TokenModel) New(userID int64, ttl time.Duration, scope string) (*Token,
 	return token, err
 }
 
-func (m *TokenModel) Insert(token *Token) error {
+func (m TokenModel) Insert(token *Token) error {
 	query := `insert into tokens (hash, user_id, expiry, scope)
 				values ($1, $2, $3, $4)`
 
@@ -62,5 +62,17 @@ func (m *TokenModel) Insert(token *Token) error {
 	defer cancel()
 
 	_, err := m.DB.ExecContext(ctx, query, args...)
+	return err
+}
+
+func (m TokenModel) DeleteAllForUser(scope string, userID int64) error {
+	query := `delete from tokens 
+				where scope = $1 and user_id = $2`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	_, err := m.DB.ExecContext(ctx, query, scope, userID)
+
 	return err
 }
