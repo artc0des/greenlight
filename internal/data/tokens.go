@@ -22,6 +22,10 @@ type Token struct {
 	Scope     string
 }
 
+type TokenModel struct {
+	DB *sql.DB
+}
+
 func generateToken(userID int64, ttl time.Duration, scope string) *Token {
 	token := &Token{
 		Plaintext: rand.Text(),
@@ -39,10 +43,6 @@ func generateToken(userID int64, ttl time.Duration, scope string) *Token {
 func ValidateTokenPlaintext(v *validator.Validator, tokenPlaintext string) {
 	v.Check(tokenPlaintext != "", "token", "must be provided")
 	v.Check(len(tokenPlaintext) == 26, "token", "must be 26 characters long")
-}
-
-type TokenModel struct {
-	DB *sql.DB
 }
 
 func (m *TokenModel) New(userID int64, ttl time.Duration, scope string) (*Token, error) {
