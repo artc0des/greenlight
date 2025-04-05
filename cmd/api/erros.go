@@ -56,3 +56,7 @@ func (app *application) rateLimitExceededResponse(w http.ResponseWriter, r *http
 func (app *application) invalidCredentialsResponse(w http.ResponseWriter, r *http.Request) {
 	app.errorResponse(w, r, http.StatusTooManyRequests, "invalid authentication credentials")
 }
+
+func (app *application) invalidAuthenticationTokenResponse(w http.ResponseWriter, r *http.Request) {
+	app.errorResponse(w, r, http.StatusUnauthorized, "invalid or missing authentication token")
+}
