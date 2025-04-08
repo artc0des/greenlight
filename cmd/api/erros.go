@@ -68,3 +68,7 @@ func (app *application) authencationRequiredResponse(w http.ResponseWriter, r *h
 func (app *application) inactiveAccountResponse(w http.ResponseWriter, r *http.Request) {
 	app.errorResponse(w, r, http.StatusUnauthorized, "your account must be activated to access this resource")
 }
+
+func (app *application) notPermittedResponse(w http.ResponseWriter, r *http.Request) {
+	app.errorResponse(w, r, http.StatusUnauthorized, "your account does not have the necessary permissions")
+}
